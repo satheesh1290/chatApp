@@ -20,13 +20,12 @@ export default function ChatProvider({ children }: PropsWithChildren) {
     const connect = async () => {
       const userToken = await generateStreamToken(user.id);
       // console.log("Token =>", token);
-      console.log(user.id);
-      console.log(await generateStreamToken(user.id));
+      // console.log(await generateStreamToken(user.id));
       await client.connectUser(
         {
           id: user.id,
-          name: user.firstname + "," + user.lastname,
-          image: "https://via.placeholder.com/100",
+          name: user.firstName + "," + user.lastName,
+          image: user.avatarUrl || "https://via.placeholder.com/100",
         },
         // client.devToken(user.id)
         userToken

@@ -3,40 +3,49 @@ import { StyleSheet, View, Alert, ScrollView } from "react-native";
 import { Button, Input } from "@rneui/themed";
 import { useAuth } from "../../../providers/AuthProvider";
 import Avatar from "../../../components/Avatar";
-import { useMutation, useQuery } from "@apollo/client";
-import { GET_PROFILE, UPDATE_PROFILE } from "../../../shared/API/profile_fetch";
+import { useMutation } from "@apollo/client";
+import { UPDATE_PROFILE } from "../../../shared/API/profile_fetch";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
-
+  const { user, loadUser, updateUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
-  const { data, refetch } = useQuery(GET_PROFILE);
+  // Debugging: Check if user data is available
+  useEffect(() => {
+    const fetchData = async () => {
+      if (user) {
+        setUsername(user.username);
+        setFirstName(user.firstName);
+        setLastName(user.lastName);
+        setAvatarUrl(user.avatarUrl);
+      } else {
+        await loadUser(); // Load user data if not already available
+      }
+    };
+    fetchData();
+    // console.log("User data:", user);
+  }, [user, loadUser]);
+
   const [updateProfile] = useMutation(UPDATE_PROFILE);
 
-  useEffect(() => {
-    console.log(data);
-    if (data?.me) {
-      setUsername(data.me.username);
-      setFirstName(data.me.firstName);
-      setLastName(data.me.lastName);
-      setAvatarUrl(data.me.avatarUrl);
-    }
-  }, [data]);
-
   async function handleUpdateProfile() {
+    if (!user) {
+      Alert.alert("Error", "Not logged in");
+      return;
+    }
     try {
       setLoading(true);
+      const updatedUserData = { username, firstName, lastName };
       const { data } = await updateProfile({
-        variables: { username, firstName, lastName },
+        variables: updatedUserData,
       });
       if (data.updateProfile.user) {
+        await updateUser({ ...updatedUserData, avatarUrl });
         Alert.alert("Success", "Profile updated successfully");
-        refetch();
       }
     } catch (error) {
       Alert.alert("Error", error.message);
@@ -49,17 +58,15 @@ export default function ProfileScreen() {
     await logout();
   }
 
+  const handleUpload = async (newUrl: string) => {
+    setAvatarUrl(newUrl);
+    await updateUser({ avatarUrl: newUrl });
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={{ alignItems: "center" }}>
-        <Avatar
-          size={200}
-          url={avatarUrl}
-          onUpload={(url: string) => {
-            setAvatarUrl(url);
-            refetch();
-          }}
-        />
+        <Avatar size={200} url={avatarUrl} onUpload={handleUpload} />
       </View>
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Input label="Email" value={user?.email} disabled />

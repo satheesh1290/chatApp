@@ -1,28 +1,8 @@
-import { useState, useEffect } from "react";
-import { StyleSheet, View, Alert, Image, Button } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, Alert, Image, Button, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useMutation, gql } from "@apollo/client";
-import { Platform } from "react-native";
-
-const getUri = () => {
-  // For Android emulator
-  if (Platform.OS === "android") {
-    return "http://192.168.31.42:8000/graphql/";
-  }
-  // For iOS emulator or other environments
-  return "http://localhost:8000/graphql/";
-};
-
-const GRAPHQL_SERVER_URL = getUri();
-
-const UPLOAD_AVATAR_MUTATION = gql`
-  mutation UploadAvatar($file: Upload!) {
-    uploadAvatar(file: $file) {
-      success
-      avatarUrl
-    }
-  }
-`;
+import { getToken } from "../providers/apollo"; // Adjust the path if needed
+import * as FileSystem from "expo-file-system";
 
 interface Props {
   size: number;
@@ -30,81 +10,98 @@ interface Props {
   onUpload: (url: string) => void;
 }
 
+const getUri = () => {
+  // For Android emulator
+  if (Platform.OS === "android") {
+    return "http://192.168.31.42:8000/users/upload-avatar/";
+  }
+  // For iOS emulator or other environments
+  return "http://localhost:8000/users/upload-avatar/";
+};
+
 export default function Avatar({ url, size = 150, onUpload }: Props) {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarSize = { height: size, width: size };
 
-  const [uploadAvatarMutation] = useMutation(UPLOAD_AVATAR_MUTATION);
-
   useEffect(() => {
+    console.log(url);
     if (url) setAvatarUrl(url);
   }, [url]);
 
-  async function uploadAvatar() {
+  const uploadImage = async (image: ImagePicker.ImagePickerAsset) => {
     try {
-      setUploading(true);
+      // Get the file extension from the URI
+      const uriParts = image.uri.split(".");
+      const fileExtension = uriParts[uriParts.length - 1];
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        quality: 1,
-        exif: false,
-      });
+      // Generate a unique filename
+      const fileName = `image_${Date.now()}.${fileExtension}`;
 
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        console.log("User cancelled image picker.");
-        return;
-      }
+      const { userToken } = await getToken();
 
-      const image = result.assets[0];
-      console.log("Got image", image);
+      // Prepare the upload options
+      const uploadOptions: FileSystem.FileSystemUploadOptions = {
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: "file", // This should match what your server expects
+        mimeType: `image/${fileExtension}`,
+        headers: {
+          Authorization: `Bearer ${userToken}`, // Replace with your actual token
+        },
+      };
 
-      if (!image.uri) {
-        throw new Error("No image uri!");
-      }
+      // Perform the upload
+      const uploadResult = await FileSystem.uploadAsync(
+        getUri(),
+        image.uri,
+        uploadOptions
+      );
 
-      // Create a File object from the image URI
-      const response = await fetch(image.uri);
-      const blob = await response.blob();
-      //   const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+      console.log("Upload success:", uploadResult);
+      const responseBody = JSON.parse(uploadResult.body);
+      const newAvatarUrl = responseBody.avatarUrl;
 
-      // Upload the file using the GraphQL mutation
-      const { data } = await uploadAvatarMutation({
-        variables: { file: blob },
-        // context: {
-        //   // This is important for file uploads
-        //   headers: {
-        //     "Content-Type": "multipart/form-data",
-        //   },
-        // },
-      });
-
-      const file = new File([blob], "avatar.jpg", { type: blob.type });
-
-      if (data.uploadAvatar.success) {
-        setAvatarUrl(data.uploadAvatar.avatarUrl);
-        onUpload(data.uploadAvatar.avatarUrl);
-      } else {
-        throw new Error("Failed to upload avatar");
-      }
+      setAvatarUrl(newAvatarUrl);
+      onUpload(newAvatarUrl); // Call the callback with the new URL
+      return uploadResult;
     } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message);
-      } else {
-        throw error;
-      }
-    } finally {
-      setUploading(false);
+      console.error("Upload error:", error);
+      throw error;
     }
-  }
+  };
+
+  const uploadAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      allowsEditing: true,
+      quality: 1,
+      exif: false,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      console.log("User cancelled image picker.");
+      return;
+    }
+
+    const image = result.assets[0];
+    if (!image.uri) {
+      throw new Error("No image uri!");
+    }
+
+    try {
+      const uploadImgResult = await uploadImage(image);
+      console.log("Upload completed:", uploadImgResult);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
+  };
 
   return (
     <View>
       {avatarUrl ? (
         <Image
-          source={{ uri: avatarUrl }}
+          source={{ uri: avatarUrl.trim().replace(/\/$/, "") }}
           accessibilityLabel="Avatar"
           style={[avatarSize, styles.avatar, styles.image]}
         />

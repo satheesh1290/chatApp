@@ -8,7 +8,7 @@ export const GET_PROFILE = gql`
       username
       firstName
       lastName
-      avatar
+      avatarUrl
     }
   }
 `;

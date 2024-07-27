@@ -21,29 +21,35 @@ const getUri = () => {
 
 const httpLink = createHttpLink({
   uri: getUri(),
-  fetchOptions: {
-    reactNative: { textStreaming: true },
-  },
 });
 
 const getToken = async () => {
   if (Platform.OS === "web") {
     const token = localStorage.getItem("token");
-    return token;
+    const userToken = localStorage.getItem("userToken");
+    return { token, userToken };
   } else {
     const token = await AsyncStorage.getItem("token");
-    return token;
+    const userToken = await AsyncStorage.getItem("userToken");
+    return { token, userToken };
   }
 };
 
 const authLink = setContext(async (_, { headers }) => {
-  const token = await getToken();
-  return {
-    headers: {
-      ...headers,
-      authorization: token ? `JWT ${token}` : "",
-    },
-  };
+  try {
+    const { token } = await getToken();
+    return {
+      headers: {
+        ...headers,
+        authorization: token ? `Bearer ${token}` : "", // Use Bearer instead of JWT
+      },
+    };
+  } catch (error) {
+    console.error("Error setting auth header:", error);
+    return {
+      headers,
+    };
+  }
 });
 
 const client = new ApolloClient({
@@ -59,4 +65,4 @@ export default function AppProvider({
   useApolloClientDevTools(client);
   return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }
-export { client as apolloClient };
+export { client as apolloClient, getToken };

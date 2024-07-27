@@ -18,19 +18,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../../providers/AuthProvider";
 import { router } from "expo-router";
 
-const setToken = async (token: string) => {
-  if (Platform.OS === "web") {
-    localStorage.removeItem("token");
-    localStorage.setItem("token", token);
-  } else {
-    try {
-      console.log(token);
-      await AsyncStorage.setItem("token", token);
-    } catch (error) {
-      console.error("Error setting token in AsyncStorage:", error);
-    }
-  }
-};
+// const setToken = async (token: string, userToken: string) => {
+//   if (Platform.OS === "web") {
+//     localStorage.setItem("token", token);
+//     localStorage.setItem("userToken", userToken);
+//   } else {
+//     try {
+//       console.log(token);
+//       await AsyncStorage.setItem("token", token);
+//       await AsyncStorage.setItem("userToken", userToken);
+//     } catch (error) {
+//       console.error("Error setting token in AsyncStorage:", error);
+//     }
+//   }
+// };
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -44,7 +45,7 @@ const SignIn = () => {
     LOGIN_MUTATION,
     {
       onCompleted: (data) => {
-        authLogin(data.login.user, data.login.token);
+        authLogin(data.login.user, data.login.token, data.login.userToken);
         router.replace("/(home)");
       },
     }
@@ -54,7 +55,7 @@ const SignIn = () => {
     SIGNUP_MUTATION,
     {
       onCompleted: (data) => {
-        authLogin(data.signup.user, data.signup.token);
+        authLogin(data.signup.user, data.signup.token, data.signup.userToken);
         router.replace("/(home)");
       },
     }
@@ -68,8 +69,8 @@ const SignIn = () => {
           password: password,
         },
       });
-      console.log("login result data=>", result.data);
-      await setToken(result.data.login.token);
+      console.log("login result data=>", await result.data);
+      // await setToken(result.data.login.token, result.data.login.userToken);
       setEmail("");
       setPassword("");
     } catch (e) {
@@ -87,7 +88,7 @@ const SignIn = () => {
         },
       });
       console.log(result.data);
-      await setToken(result.data.signup.token);
+      // await setToken(result.data.signup.token, result.data.signup.userToken);
       setEmail("");
       setPassword("");
     } catch (e) {

@@ -7,6 +7,9 @@ export default function MainTabScreen() {
   const { user } = useAuth();
   return (
     <>
+      {/* Delete later */}
+      {/* <Redirect href={"/(home)/call"} /> */}
+
       <Stack.Screen
         options={{
           headerRight: () => (

@@ -38,8 +38,8 @@ export default function UserScreen() {
     const channel = client.channel("messaging", {
       name: chatName,
       members: [user.id, userId],
+      distinct: false,
     });
-    await channel.create();
     await channel.watch();
     router.replace(`/(home)/channel/${channel.cid}`);
   };
@@ -55,11 +55,13 @@ export default function UserScreen() {
     }
 
     try {
-      const channel = client.channel("messaging", {
+      const channelId = `group-${Date.now()}`; // Unique channel ID
+      const channel = client.channel("messaging", channelId, {
         name: groupName.trim(),
         members: [user.id, ...selectedUsers],
+        distinct: false,
       });
-      await channel.create();
+      await channel.watch();
       router.replace(`/(home)/channel/${channel.cid}`);
       setSelectedUsers([]);
       setGroupName("");

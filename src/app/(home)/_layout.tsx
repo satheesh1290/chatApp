@@ -4,6 +4,7 @@ import { StreamChat } from "stream-chat";
 import { environment } from "../../../environment";
 import { useAuth } from "../../providers/AuthProvider";
 import ChatProvider from "../../providers/ChatProviders";
+import VideoProvider from "../../providers/VideoProvider";
 
 const client = StreamChat.getInstance(environment.EXPO_PUBLIC_STREAM_API_KEY);
 
@@ -16,9 +17,11 @@ export default function HomeLayout() {
 
   return (
     <ChatProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <VideoProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </VideoProvider>
     </ChatProvider>
   );
 }

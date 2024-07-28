@@ -5,7 +5,7 @@ import { getToken } from "../providers/apollo"; // Adjust the path if needed
 import * as FileSystem from "expo-file-system";
 
 interface Props {
-  size: number;
+  size?: number;
   url: string | null;
   onUpload: (url: string) => void;
 }
@@ -19,13 +19,16 @@ const getUri = () => {
   return "http://localhost:8000/users/upload-avatar/";
 };
 
-export default function Avatar({ url, size = 150, onUpload }: Props) {
+export default function Avatar({ url, size, onUpload }: Props) {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarSize = { height: size, width: size };
 
   useEffect(() => {
-    console.log(url);
+    if (url) setAvatarUrl(url);
+  }, [url]);
+
+  useEffect(() => {
     if (url) setAvatarUrl(url);
   }, [url]);
 
